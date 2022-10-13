@@ -37,12 +37,20 @@ sample output:
         );
         $screenList = [];
         $screenListRaw = shell_exec('screen -ls');
-        preg_match_all('/^\t(?<screen_id>\d+)\.(?<screen_name>[^\t]+)\t\((?<creation_date>[^\)]+)\)\t\((?<attachment_status>[^\)]+)\)$/m', $screenListRaw, $matches);
+        $matchCounter = preg_match_all('/^\t+(?<screen_id>\d+)\.(?<screen_name>[^\t]+)\t\((?<creation_date>[^\)]+)\)?\t\((?<attachment_status>[^\)]+)\)$/m', $screenListRaw, $matches);
+        if ($matchCounter === false || $matchCounter === 0) {
+            // ... Amazon Linux' GNU Screen use a slightly different syntax from Ubuntu Linux' GNU Screen... why? dunno
+            $matchCounter = preg_match_all('/^\t+(?<screen_id>\d+)\.(?<screen_name>[^\t]+)\t\((?<attachment_status>[^\)]+)\)$/m', $screenListRaw, $matches);
+            if ($matchCounter === false || $matchCounter === 0) {
+                // either unknown format or no screens found
+                return $screenList;
+            }
+        }
         foreach ($matches['screen_id'] as $key => $id) {
             $screenList[] = [
                 'id' => $id,
                 'name' => $matches['screen_name'][$key],
-                'creation_date' => $matches['creation_date'][$key],
+                'creation_date' => $matches['creation_date'][$key] ?? null, // not available on Amazon Linux :(
                 'attachment_status' => $matches['attachment_status'][$key],
             ];
         }
